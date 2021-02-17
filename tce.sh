@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+################################################################################
+# tce.sh ROOT TARGET [SOOT]
+# ROOT: Root of project
+# TARGET: Root of compilation target relative to $ROOT
+#
+# This procedure does the following:
+# 1. Set Up Working Directory
+#    (a) Create a working directory $WORK
+#    (b) Jar the compiled files
+#    (c) Create $COMPILEDMUTANTS, a directory to store compiled classfiles from
+#        each mutant
+#
+# 2. For each mutant in $MUTANTS
+#    (a) create a new directory in $COMPILEDMUTANTS
+#    (b) find the mutant file...ensure there is exactly 1!
+#    (c) compile the mutant file, outputting to the directory we created in 2a
+#
+
+function die {
+    echo "Die: $1"
+    exit 1
+}
+
+if [ $# -ne 2 ]
+then
+    die "usage: tce.sh ROOT TARGET [SOOT]"
+fi
+
+ROOT=$(realpath "$1")
+TARGET="$2"
+MUTANTS="$ROOT/mutants"
+# SOOT="$3"
+
+function setup-wd {
+    # 1a
+    WORK=$(mktemp -d -t "tce") || die "Failed to create temporary directory "
+    echo "Working directory: $WORK"
+
+    # 1b
+    pushd "$ROOT/$TARGET" > /dev/null
+    JAR="$WORK/classes.jar"
+    jar cf "$JAR" $(find * -name "*.class")
+    popd > /dev/null
+
+    # 1c
+    COMPILEDMUTANTS="$WORK/compiled-mutants"
+    mkdir "$COMPILEDMUTANTS"
+}
+
+
+################################################################################
+# Find all classfiles newer than $WORK/timestamp in the given directory
+function find-new-classfiles {
+    dir="$1"
+    find "$dir" -newer "$WORK/timestamp"
+}
+
+################################################################################
+# This command is to be run on the output of `find`, in particular for finding
+# mutants. This runs through `wc` to ensure that there exactly one line was
+# returned. If there was another number of found items, die with an error
+# message.
+function find-exactly-one-mutant {
+    mid="$1"
+    pushd "$MUTANTS/$mid" >> /dev/null
+    found=$(find * -name "*.java")
+    count=$(echo "$found" | wc -l)    # Count number of found items
+    count=$(echo "$count" | xargs)    # Trim whitespace
+    test $count -eq 1 || die "Found multiple mutants in $mid"
+    echo "$found"
+    popd >> /dev/null
+}
+
+function run-on-mutants {
+    for mid in $(ls "$MUTANTS")
+    do
+        echo "Mutant $mid"
+        # 2a
+        MDIR="$COMPILEDMUTANTS/$mid"
+        mkdir $MDIR
+
+        # 2b
+        rel_mutant_file=$(find-exactly-one-mutant $mid)
+        echo "    Found mutant file $rel_mutant_file"
+        mutant_file="$MUTANTS/$mid/$rel_mutant_file"
+
+        # 2c
+        echo "    Compiling"
+        javac -cp $JAR -d $MDIR $mutant_file
+
+        echo "    Compiled following files:"
+        pushd "$MDIR" > /dev/null
+        for x in $(find * -name "*.class") ; do
+            echo "        + $x"
+        done
+        popd > /dev/null
+    done
+    echo "Compiled mutants are located in\n$COMPILEDMUTANTS"
+}
+
+setup-wd
+run-on-mutants
