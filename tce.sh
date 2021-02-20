@@ -44,7 +44,7 @@ MUTANTS="$ROOT/mutants"
 
 function setup-wd {
     # 1a
-    WORK=$(mktemp -d -t "tce") || die "Failed to create temporary directory "
+    WORK=$(mktemp -d "${TMPDIR:-/tmp/}tce.XXXXXXXXXXXX") || die "Failed to create temporary directory "
     echo "Working directory: $WORK"
 
     # 1b
