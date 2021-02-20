@@ -24,15 +24,23 @@ function die {
     exit 1
 }
 
-if [ $# -ne 2 ]
+if [ $# -eq 2 ]
 then
-    die "usage: tce.sh ROOT TARGET [SOOT]"
+    ROOT=$(realpath "$1")
+    TARGET="$2"
+elif [ $# -eq 4 ]
+then
+    ROOT=$(realpath "$1")
+    TARGET="$2"
+    SOOT=$(realpath "$3")
+    RT=$(realpath "$4")
+    echo "SOOT:$SOOT"
+    echo "RT:$RT"
+else
+    die "usage: tce.sh ROOT TARGET [SOOT RTJAR]"
 fi
 
-ROOT=$(realpath "$1")
-TARGET="$2"
 MUTANTS="$ROOT/mutants"
-# SOOT="$3"
 
 function setup-wd {
     # 1a
@@ -47,6 +55,7 @@ function setup-wd {
 
     # 1c
     COMPILEDMUTANTS="$WORK/compiled-mutants"
+    SOOTOUTPUT="$WORK/soot"
     mkdir "$COMPILEDMUTANTS"
 }
 
@@ -77,7 +86,7 @@ function find-exactly-one-mutant {
 function run-on-mutants {
     for mid in $(ls "$MUTANTS")
     do
-        echo "Mutant $mid"
+        printf "\033[1;32mMutant $mid\033[0m\n"
         # 2a
         MDIR="$COMPILEDMUTANTS/$mid"
         mkdir $MDIR
@@ -91,15 +100,33 @@ function run-on-mutants {
         echo "    Compiling"
         javac -cp $JAR -d $MDIR $mutant_file
 
+        if [ ! -z ${SOOT+x} ]
+        then
+            mkdir "$SOOTOUTPUT/$mid"
+            pushd "$MDIR" > /dev/null
+            echo "    Running Soot"
+            for cf in $(find * -name "*.class")
+            do
+                cf=${cf%.class}        # Remove file extension: `org/foo/Bar.class` --> `org/foo/Bar`
+                cf=${cf//\//.}         # Replace `/` with `.`:  `org/foo/Bar`       --> `org.foo.Bar`
+                java -jar $SOOT -cp "$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid"
+            done
+            popd > /dev/null
+        else
+            echo "No soot"
+        fi
         echo "    Compiled following files:"
-        pushd "$MDIR" > /dev/null
-        for x in $(find * -name "*.class") ; do
-            echo "        + $x"
-        done
-        popd > /dev/null
     done
     echo "Compiled mutants are located in\n$COMPILEDMUTANTS"
 }
+
+function report {
+    echo
+    echo
+    echo "Working Directory: $WORK"
+}
+
+trap report EXIT
 
 setup-wd
 run-on-mutants
