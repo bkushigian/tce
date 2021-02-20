@@ -112,10 +112,7 @@ function run-on-mutants {
                 java -jar $SOOT -cp "$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid"
             done
             popd > /dev/null
-        else
-            echo "No soot"
         fi
-        echo "    Compiled following files:"
     done
     echo "Compiled mutants are located in\n$COMPILEDMUTANTS"
 }
