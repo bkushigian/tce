@@ -24,6 +24,38 @@ function die {
     exit 1
 }
 
+# BEGIN THE PARSING OF ARGUMENTS
+if [ $# -lt 2 ]
+then
+    die "usage: tce.sh ROOT TARGET [SOOT RTJAR] [-d DEPJAR]*"
+fi
+
+DEPS=""
+PARAMS=""
+while (( "$#" )); do
+    case "$1" in
+        -d|--dependencies)
+            if [ -z "$DEPS" ]; then
+                DEPS="$2"
+            else
+                DEPS="$2:$DEPS"
+            fi
+            shift
+            ;;
+        -*|--*)
+            die "Unsupported flag $1. Usage: tce.sh ROOT TARGET [SOOT RTJAR] [-d DEPJAR]*"
+            echo "Unsupported flag $1" >&2
+            exit 1
+            ;;
+        *)
+            PARAMS="$PARAMS $1"
+            ;;
+    esac
+    shift
+done
+
+eval set -- "$PARAMS"
+
 if [ $# -eq 2 ]
 then
     ROOT=$(realpath "$1")
@@ -37,8 +69,10 @@ then
     echo "SOOT:$SOOT"
     echo "RT:$RT"
 else
-    die "usage: tce.sh ROOT TARGET [SOOT RTJAR]"
+    die "usage: tce.sh ROOT TARGET [SOOT RTJAR] [-d DEPJAR]*"
 fi
+
+# END THE PARSING OF THE ARGS
 
 MUTANTS="$ROOT/mutants"
 
@@ -98,7 +132,8 @@ function run-on-mutants {
 
         # 2c
         echo "    Compiling"
-        if [ ! javac -cp $JAR -d $MDIR $mutant_file ]
+
+        if  ! javac -cp $JAR -d $MDIR $mutant_file
         then
             echo "Failed to compile mutant " $mid
             echo "$mid $mutant_file" >> "$WORK/tce-failures"
@@ -114,7 +149,7 @@ function run-on-mutants {
             do
                 cf=${cf%.class}        # Remove file extension: `org/foo/Bar.class` --> `org/foo/Bar`
                 cf=${cf//\//.}         # Replace `/` with `.`:  `org/foo/Bar`       --> `org.foo.Bar`
-                if [ ! java -jar $SOOT -cp "$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid" ]
+                if ! java -jar $SOOT -cp "$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid"
                 then
                     echo "Failed to run soot on mutant " $mid
                     echo "$mid $mutant_file" >> "$WORK/tce-soot-failures"
