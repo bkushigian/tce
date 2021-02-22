@@ -74,7 +74,7 @@ instead of O(N^2) performance.
 
 '''
 
-from sys import argv
+from sys import argv, exit
 import os
 
 def read_name_tuple_from_root(name_tuple, root):
@@ -179,6 +179,13 @@ def progress(done, total, width=80, increment=1, newline=False):
     if newline: print()
 
 if __name__ == "__main__":
+    if len(argv) != 3:
+        print("usage: COMPILED_MUTANTS COMPILED_PROGRAM")
+        print("    COMPILED_MUTANTS: root of directory containing the compiled mutants.")
+        print("        Contents should be `1/`, `2/`, ...")
+        print("    COMPILED_PROGRAM: root of directory containing package roots")
+        print("        of the compiled classfiles.")
+        exit(1)
     compiled_mutants = argv[1]
     compiled_program = argv[2]
     run_tce(compiled_mutants, compiled_program)
