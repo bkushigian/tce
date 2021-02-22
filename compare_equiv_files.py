@@ -11,10 +11,11 @@ This program compares two files with equivalences, reporting
 
 '''
 
-from sys import argv
+from sys import argv, exit
 
 if len(argv) < 3:
     print("usage: python3 compare_equiv_files.py file1 file2")
+    exit(1)
 
 file1 = argv[1]
 file2 = argv[2]
