@@ -84,6 +84,14 @@ function find-exactly-one-mutant {
 }
 
 function run-on-mutants {
+    if [ -e "tce-failures" ]
+    then
+        rm "tce-failures"
+    fi
+    if [ -e "tce-soot-failures" ]
+    then
+        rm "tce-soot-failures"
+    fi
     for mid in $(ls "$MUTANTS")
     do
         printf "\033[1;32mMutant $mid\033[0m\n"
@@ -98,7 +106,12 @@ function run-on-mutants {
 
         # 2c
         echo "    Compiling"
-        javac -cp $JAR -d $MDIR $mutant_file
+        if [ ! javac -cp $JAR -d $MDIR $mutant_file ]
+        then
+            echo "Failed to compile mutant " $mid
+            echo "$mid $mutant_file" >> "tce-failures"
+            continue
+        fi
 
         if [ ! -z ${SOOT+x} ]
         then
@@ -109,7 +122,12 @@ function run-on-mutants {
             do
                 cf=${cf%.class}        # Remove file extension: `org/foo/Bar.class` --> `org/foo/Bar`
                 cf=${cf//\//.}         # Replace `/` with `.`:  `org/foo/Bar`       --> `org.foo.Bar`
-                java -jar $SOOT -cp "$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid"
+                if [ ! java -jar $SOOT -cp "$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid" ]
+                then
+                    echo "Failed to run soot on mutant " $mid
+                    echo "$mid $mutant_file" >> "tce-soot-failures"
+                    break
+                fi
             done
             popd > /dev/null
         fi
