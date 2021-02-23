@@ -45,9 +45,9 @@ while (( "$#" )); do
         -dd|--dependency-dir)
             for f in $(ls $2); do
                 if [ -z "$DEPS" ]; then
-                    DEPS="$(realpath $f)"
+                    DEPS="$(realpath $2/$f)"
                 else
-                    DEPS="$DEPS:$(realpath $f)"
+                    DEPS="$DEPS:$(realpath $2/$f)"
                 fi
             done
             shift
