@@ -54,6 +54,15 @@ while (( "$#" )); do
     shift
 done
 
+if [ -z ${JAVA_HOME+x} ]
+then
+    JAVA="$JAVA_HOME/bin/java"
+    JAVAC="$JAVA_HOME/bin/javac"
+else
+    JAVA=java
+    JAVAC=javac
+fi
+
 eval set -- "$PARAMS"
 
 if [ $# -eq 2 ]
@@ -133,7 +142,7 @@ function run-on-mutants {
         # 2c
         echo "    Compiling"
 
-        if  ! javac -cp $JAR -d $MDIR $mutant_file
+        if  ! $JAVAC -cp $JAR -d $MDIR $mutant_file
         then
             echo "Failed to compile mutant " $mid
             echo "$mid $mutant_file" >> "$WORK/tce-failures"
@@ -149,7 +158,7 @@ function run-on-mutants {
             do
                 cf=${cf%.class}        # Remove file extension: `org/foo/Bar.class` --> `org/foo/Bar`
                 cf=${cf//\//.}         # Replace `/` with `.`:  `org/foo/Bar`       --> `org.foo.Bar`
-                if ! java -jar $SOOT -cp "$MDIR:$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid"
+                if ! $JAVA -jar $SOOT -cp "$MDIR:$JAR:$RT" $cf -d "$SOOTOUTPUT/$mid"
                 then
                     echo "Failed to run soot on mutant " $mid
                     echo "$mid $mutant_file" >> "$WORK/tce-soot-failures"
