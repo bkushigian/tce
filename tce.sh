@@ -56,8 +56,11 @@ done
 
 if [ -z ${JAVA_HOME+x} ]
 then
+    echo "Using JAVA_HOME=$JAVA_HOME"
     JAVA="$JAVA_HOME/bin/java"
     JAVAC="$JAVA_HOME/bin/javac"
+    echo "JAVA=$JAVA"
+    echo "JAVAC=$JAVAC"
 else
     JAVA=java
     JAVAC=javac
