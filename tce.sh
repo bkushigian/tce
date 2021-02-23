@@ -54,17 +54,18 @@ while (( "$#" )); do
     shift
 done
 
-if [ -z ${JAVA_HOME+x} ]
+if [ -z $JAVA_HOME ]
 then
     echo "Using JAVA_HOME=$JAVA_HOME"
     JAVA="$JAVA_HOME/bin/java"
     JAVAC="$JAVA_HOME/bin/javac"
-    echo "JAVA=$JAVA"
-    echo "JAVAC=$JAVAC"
 else
+    echo "No JAVA_HOME set...using default java and javac"
     JAVA=java
     JAVAC=javac
 fi
+echo "JAVA=$JAVA"
+echo "JAVAC=$JAVAC"
 
 eval set -- "$PARAMS"
 
