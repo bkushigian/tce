@@ -87,7 +87,7 @@ fi
 
 # END THE PARSING OF THE ARGS
 
-if [ -z $JAVA_HOME ]
+if [ ! -z $JAVA_HOME ]
 then
     echo "Using JAVA_HOME=$JAVA_HOME"
     JAVA="$JAVA_HOME/bin/java"
