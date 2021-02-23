@@ -35,18 +35,18 @@ while (( "$#" )); do
     case "$1" in
         -d|--dependencies)
             if [ -z "$DEPS" ]; then
-                DEPS="$2"
+                DEPS="$(realpath $2)"
             else
-                DEPS="$2:$DEPS"
+                DEPS="$DEPS:$(realpath $2)"
             fi
             shift
             ;;
         -dd|--dependency-dir)
             for f in $(ls $2); do
                 if [ -z "$DEPS" ]; then
-                    DEPS="$f"
+                    DEPS="$(realpath $f)"
                 else
-                    DEPS="$f:$DEPS"
+                    DEPS="$DEPS:$(realpath $f)"
                 fi
             done
             shift
