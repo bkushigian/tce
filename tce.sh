@@ -29,6 +29,7 @@ then
     die "usage: tce.sh ROOT [SOOT RTJAR] [-d DEPJAR]* [-dd DEPDIR]"
 fi
 
+DRYRUN="FALSE"
 DEPS=""
 PARAMS=""
 while (( "$#" )); do
