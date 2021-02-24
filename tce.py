@@ -75,7 +75,10 @@ instead of O(N^2) performance.
 '''
 
 from sys import argv, exit
+from argparse import ArgumentParser
 import os
+
+VALIDATE=False  # Should we validate the equivalences?
 
 def read_name_tuple_from_root(name_tuple, root):
     contents = []
@@ -86,7 +89,31 @@ def read_name_tuple_from_root(name_tuple, root):
     contents_tuple = tuple(contents)
     return contents_tuple
 
+def get_name_tuple(root):
+    '''
+    Return a sorted tuple of qualified path names of all classfiles recursively
+    contained in this directory.
+    '''
+    name_list = []
+    for (dirpath, dirnames, filenames) in os.walk(root):
+        # 1b
+        if not filenames: continue
+        relpath = os.path.relpath(dirpath, root)
+        name_list += [os.path.join(relpath, filename) for filename in filenames]
+
+
+    return tuple(sorted(name_list))
+
 def run_tce(mutants, program):
+    '''
+    Detect equivalent mutants from the already compiled original project and its mutants.
+
+    Arguments
+    =========
+    :mutants: the root of the compiled mutants directory. Should contain 1/, 2/, ...
+    :program: the root of the compiled program. Should contain the package path
+              bases (like org/, com/, etc)
+    '''
 
     # 1a
     hashes = {}
@@ -100,27 +127,26 @@ def run_tce(mutants, program):
 
     for i, mid in enumerate(mids):
         root = os.path.join(mutants, mid)
-        for (dirpath, dirnames, filenames) in os.walk(root):
-            # 1b
-            if not filenames: continue
-            relpath = os.path.relpath(dirpath, root)
 
-            # 1c
-            name_tuple = tuple([os.path.join(relpath, filename) for filename in sorted(filenames)])
+        # 1c
+        name_tuple = get_name_tuple(root)
 
-            # 1d
-            d = hashes.setdefault(name_tuple, {})
+        if not name_tuple: continue
 
-            # 1e
-            contents_tuple = read_name_tuple_from_root(name_tuple, root)
+        # 1d
+        d = hashes.setdefault(name_tuple, {})
 
-            # 1f
-            eq_class = d.setdefault(contents_tuple, set())
+        # 1e
+        contents_tuple = read_name_tuple_from_root(name_tuple, root)
 
-            # 1g
-            eq_class.add(mid)
-            if len(eq_class) == 2:
-                nonsingleton_equivalence_classes.append(eq_class)
+        # 1f
+        eq_class = d.setdefault(contents_tuple, set())
+
+        # 1g
+        eq_class.add(mid)
+
+        if len(eq_class) == 2:
+            nonsingleton_equivalence_classes.append(eq_class)
         progress(i+1, num_mutants, increment=5)
 
     progress(num_mutants, num_mutants, newline=True)
@@ -141,6 +167,13 @@ def run_tce(mutants, program):
 
     equivalent_mutants = [x for x in nonsingleton_equivalence_classes if '0' in x]
     redundant_mutants = [x for x in nonsingleton_equivalence_classes if '0' not in x]
+
+    if VALIDATE:
+        print("Validating {} equivalence classes".format(len(nonsingleton_equivalence_classes)))
+        for eq_class in nonsingleton_equivalence_classes:
+            name_tuples = (get_name_tuple(os.path.join(mutants, mid)) for mid in eq_class)
+            if len(set(name_tuples)) != 1:
+                print("Equiv Class", eq_class, "has name tuples", name_tuples)
 
     with open('all-equivalences.txt', 'w') as f:
         for eq_class in nonsingleton_equivalence_classes:
@@ -167,6 +200,7 @@ def run_tce(mutants, program):
     print("total redundant mutants: ", num_redundant_mutants)
 
 def progress(done, total, width=80, increment=1, newline=False):
+    '''A simple progress bar'''
     if done % increment != 0: return
     summary = '({} of {} | {:.2f}%)'.format(done, total, 100*done/total)
     summary_width = len(summary)
@@ -179,13 +213,16 @@ def progress(done, total, width=80, increment=1, newline=False):
     if newline: print()
 
 if __name__ == "__main__":
-    if len(argv) != 3:
-        print("usage: COMPILED_MUTANTS COMPILED_PROGRAM")
-        print("    COMPILED_MUTANTS: root of directory containing the compiled mutants.")
-        print("        Contents should be `1/`, `2/`, ...")
-        print("    COMPILED_PROGRAM: root of directory containing package roots")
-        print("        of the compiled classfiles.")
-        exit(1)
-    compiled_mutants = argv[1]
-    compiled_program = argv[2]
+
+    parser = ArgumentParser()
+    parser.add_argument('compiled_mutants', help='root of directory containing the compiled mutants')
+    parser.add_argument('compiled_program', help='root of directory containing the compiled program')
+    parser.add_argument('--validate', action='store_true', help='validate mutants and report errors')
+
+    args = parser.parse_args()
+    print(args)
+
+    compiled_mutants = args.compiled_mutants
+    compiled_program = args.compiled_program
+    VALIDATE = args.validate
     run_tce(compiled_mutants, compiled_program)
