@@ -116,7 +116,11 @@ function setup-wd {
     # 1c
     COMPILEDMUTANTS="$WORK/compiled-mutants"
     SOOTOUTPUT="$WORK/soot"
+    LOGFILE="$WORK/tce.log"
     mkdir "$COMPILEDMUTANTS"
+
+    echo "Start Time: $(date +"%D-%T")" >> $LOGFILE
+    echo "Project Root: $ROOT" >> $LOGFILE
 }
 
 
@@ -198,3 +202,4 @@ trap report EXIT
 
 setup-wd
 run-on-mutants
+echo "End Time: $(date +"%D-%T")" >> $LOGFILE
